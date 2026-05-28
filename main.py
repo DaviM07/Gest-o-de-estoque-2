@@ -1,69 +1,92 @@
 import sqlite3
 
-# =========================
 # CONEXÃO
-# =========================
-def conectar():
-    conexao = sqlite3.connect("padaria.db")
-    cursor = conexao.cursor()
-    return conexao, cursor
+conexao = sqlite3.connect("padaria.db")
+cursor = conexao.cursor()
 
+# TABELA
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS produtos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    produto TEXT UNIQUE,
+    quantidade INTEGER,
+    preco REAL,
+    marca TEXT
+)
+""")
 
+# LISTA (produto: quantidade, preço, marca)
+produtos = {
+    "pão francês": (300, 0.80, "Produção Própria"),
+    "pão doce": (200, 1.50, "Produção Própria"),
+    "pão sírio": (100, 6.90, "Produção Própria"),
+    "brioche": (250, 4.50, "Produção Própria"),
+    "baguete": (60, 7.00, "Produção Própria"),
+    "pão de queijo": (2000, 0.50, "Forno de Minas"),
+    "rosca": (18, 12.00, "Caseira"),
+    "sonho": (25, 6.50, "Doce Sabor"),
+    "enrolado de sarsicha": (35, 5.00, "Produção Própria"),
+    "misto quente": (20, 8.50, "Produção Própria"),
 
-# CRIAR TABELA
+    "copo de café": (100, 3.00, "3 Corações"),
+    "refri em lata": (120, 6.00, "Coca-Cola"),
+    "agua": (100, 3.00, "Crystal"),
 
-def criar_tabela(cursor):
+    "presunto": (20, 39.90, "Sadia"),
+    "queijo muçarela": (25, 54.90, "Tirolez"),
+
+    "chocolate batom": (80, 2.50, "Garoto"),
+    "doritos": (60, 10.00, "Elma Chips"),
+
+    "picolé de uva": (50, 4.00, "Kibon"),
+    "sorvete de chocolate": (20, 18.00, "Nestlé")
+}
+
+# INSERIR 
+for produto, dados in produtos.items():
+    quantidade, preco, marca = dados
+
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS produtos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        categoria TEXT NOT NULL,
-        produto TEXT NOT NULL UNIQUE,
-        quantidade INTEGER,
-        preco REAL,
-        marca TEXT
-    )
-    """)
+    INSERT OR IGNORE INTO produtos (produto, quantidade, preco, marca)
+    VALUES (?, ?, ?, ?)
+    """, (produto, quantidade, preco, marca))
+
+conexao.commit()
 
 
-# INSERIR DADOS INICIAIS 
-def inserir_dados_iniciais(cursor, conexao):
-    cursor.execute("SELECT COUNT(*) FROM produtos")
 
-    if cursor.fetchone()[0] > 0:
-        return  # Já tem dados, não insere novamente
+# DEF ADICIONAR
 
-    estoque = {
-       
-    }
+def adicionar_estoque():
+    produto = input("Produto: ").lower()
+    quantidade = int(input("Quantidade para adicionar: "))
 
-    for categoria, produtos in estoque.items():
-        for produto, dados in produtos.items():
-            quantidade, preco, marca = dados
+    cursor.execute("SELECT quantidade FROM produtos WHERE produto = ?", (produto,))
+    resultado = cursor.fetchone()
 
-            cursor.execute("""
-            INSERT INTO produtos
-            (categoria, produto, quantidade, preco, marca)
-            VALUES (?, ?, ?, ?, ?)
-            """, (categoria, produto, quantidade, preco, marca))
+    if resultado is None:
+        preco = float(input("Preço: "))
+        marca = input("Marca: ")
+
+        cursor.execute("""
+        INSERT INTO produtos (produto, quantidade, preco, marca)
+        VALUES (?, ?, ?, ?)
+        """, (produto, quantidade, preco, marca))
+
+    else:
+        cursor.execute("""
+        UPDATE produtos
+        SET quantidade = quantidade + ?
+        WHERE produto = ?
+        """, (quantidade, produto))
 
     conexao.commit()
+    print("✅ Estoque atualizado!")
 
 
+# DEF RETIRAR
 
-# MOSTRAR PRODUTOS
-
-def mostrar_estoque(cursor):
-    cursor.execute("SELECT produto, quantidade, preco FROM produtos")
-
-    print("\n=== ESTOQUE ===")
-    for produto, qtd, preco in cursor.fetchall():
-        print(f"{produto} | Qtd: {qtd} | R$ {preco}")
-
-
-
-# RETIRAR PRODUTO
-
-def retirar_estoque(cursor, conexao):
+def retirar_estoque():
     produto = input("Produto: ").lower()
     quantidade = int(input("Quantidade para retirar: "))
 
@@ -79,48 +102,91 @@ def retirar_estoque(cursor, conexao):
         return
 
     cursor.execute("""
-        UPDATE produtos
-        SET quantidade = quantidade - ?
-        WHERE produto = ?
+    UPDATE produtos
+    SET quantidade = quantidade - ?
+    WHERE produto = ?
     """, (quantidade, produto))
 
     conexao.commit()
-    print(" Estoque atualizado!")
-
+    print(" Retirada feita!")
 
 
 # MENU
+while True:
+    print("\n1 - Ver estoque")
+    print("2 - Adicionar")
+    print("3 - Retirar")
+    print("0 - Sair")
 
-def menu():
-    conexao, cursor = conectar()
+    opcao = input("Escolha: ")
 
-    criar_tabela(cursor)
-    inserir_dados_iniciais(cursor, conexao)
+    if opcao == "1":
+        cursor.execute("SELECT produto, quantidade, preco, marca FROM produtos")
+        for item in cursor.fetchall():
+            print(item)
 
-    while True:
-        print("\n===== PADARIA =====")
-        print("1 - Ver estoque")
-        print("2 - Retirar produto")
-        print("0 - Sair")
+    elif opcao == "2":
+        adicionar_estoque()
 
-        opcao = input("Escolha: ")
+    elif opcao == "3":
+        retirar_estoque()
 
-        if opcao == "1":
-            mostrar_estoque(cursor)
+    elif opcao == "0":
+        break
 
-        elif opcao == "2":
-            retirar_estoque(cursor, conexao)
+conexao.close()
 
-        elif opcao == "0":
-            break
-
-        else:
-            print("Opção inválida!")
-
-    conexao.close()
+# CALCULADORA FINANCEIRA
 
 
+print("CALCULADORA FINANCEIRA DA PADARIA")
 
-# EXECUTAR
+print("1. Entrada")
+print("2. Saída")
+print("3. Lucro")
+print("4. Prejuízo")
+print("0. Sair")
 
-menu()
+opcao = int(input("Escolha uma opção: "))
+
+# Entrada
+if opcao == 1:
+    entrada = float(input("Digite o valor da entrada: R$ "))
+    print("Entrada registrada: R$", entrada)
+
+# Saída
+elif opcao == 2:
+    saida = float(input("Digite o valor da saída: R$ "))
+    print("Saída registrada: R$", saida)
+
+# Lucro
+elif opcao == 3:
+    vendas = float(input("Digite o total de vendas: R$ "))
+    gastos = float(input("Digite o total de gastos: R$ "))
+
+    lucro = vendas - gastos
+
+    print("Lucro total: R$", lucro)
+
+# Prejuízo
+elif opcao == 4:
+    vendas = float(input("Digite o total de vendas: R$ "))
+    gastos = float(input("Digite o total de gastos: R$ "))
+
+    prejuizo = gastos - vendas
+
+    print("Prejuízo total: R$", prejuizo)
+
+# Sair
+elif opcao == 0:
+    print("Sistema encerrado.")
+
+# Opção inválida
+else:
+    print("Opção inválida!")
+
+# =========================
+# FECHA CONEXÃO
+# =========================
+
+conexao.close()
