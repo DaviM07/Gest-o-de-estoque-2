@@ -268,7 +268,7 @@ O projeto foi desenvolvido com finalidade educacional para aplicação prática 
 
 ---
 
-## Considerações Finais
+## Considerações 
 
 Este projeto demonstra a integração entre Python e SQLite na construção de um sistema simples de gerenciamento de estoque e controle financeiro para uma padaria.
 
